@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+314env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data & Models (용량이 크고 민감할 수 있음)
+data/rawdata/
+data/processed/*.csv
+models/*.pth
+
+# Environment
+.env
+win_env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code (선택)
+CLAUDE.md

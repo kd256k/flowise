@@ -1,0 +1,129 @@
+# =============================================================================
+# Flowise - 배수지 수요 예측 시스템
+# 서비스 구성:
+#   1. flow-api     : 유량 예측 FastAPI (port 8000)
+#   2. weather-api  : 기상+유량 예측 FastAPI (port 8001)
+#   3. jupyter      : 노트북 실험 환경 (port 8888)
+#
+# 외부 의존성 (컨테이너 외부):
+#   - Redis  : ${REDIS_HOST}:${REDIS_PORT}
+#   - MySQL  : ${MYSQL_HOST}:${MYSQL_PORT}
+# =============================================================================
+
+services:
+
+  # ── 유량 예측 API ──────────────────────────────────────────────────────
+  flow-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flowise-flow
+    command: >
+      python -m uvicorn src.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src                    # 소스코드 (실시간 반영)
+      - ./data:/app/data                  # CSV 원천 데이터
+      - ./models:/app/models              # .pth 모델 파일
+      - ./notebook:/app/notebook          # 노트북 공유
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app:/app/src:/app/src/api
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ── 기상 + 유량 예측 API ───────────────────────────────────────────────
+  weather-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flowise-weather
+    command: >
+      python -m uvicorn src.api.weather_main:app
+      --host 0.0.0.0
+      --port 8001
+      --reload
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./notebook:/app/notebook
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app:/app/src:/app/src/api
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ── Jupyter Lab (개발/실험용) ──────────────────────────────────────────
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flowise-jupyter
+    command: >
+      python -m jupyterlab
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --allow-root
+      --NotebookApp.token=flowise
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./notebook:/app/notebook
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app:/app/src:/app/src/api
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - dev
+    restart: unless-stopped
