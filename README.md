@@ -1,4 +1,4 @@
-# Flowise — 배수지 수요예측 AI 시스템
+# water_flow_predictor — 배수지 수요예측 AI 시스템
 
 배수지 유출유량을 LSTM Seq2Seq + Bahdanau Attention으로 예측하여,
 저비용 전기 시간대의 펌프 스케줄링을 최적화하는 시스템.
