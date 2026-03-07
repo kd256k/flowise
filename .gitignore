@@ -13,7 +13,7 @@ venv/
 # Data & Models (용량이 크고 민감할 수 있음)
 data/rawdata/
 data/processed/*.csv
-models/*.pth
+# models/*.pth
 
 # Environment
 .env
